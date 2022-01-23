@@ -1,0 +1,6 @@
+config.json
+pynel/board/config.json
+config.bak.json
+stubs
+firmware/
+pynel/board/image.dat

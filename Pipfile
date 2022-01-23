@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+
+[dev-packages]
+esptool = "*"
+imgcat = "*"
+pillow = "*"
+rshell = "*"
+
+[scripts]
+flash = "esptool --port $RSHELL_PORT --chip esp32 --baud 460800 write_flash -z 0x1000"
+configure = "python pynel/configure.py"
+upload = "rshell -f pynel/upload --wait 5"
+image = "python pynel/image.py"
+simulate = "python pynel/simulate.py"

@@ -2,7 +2,7 @@ import json
 
 
 def get_dir(file_dunder):
-    return "/".join(file_dunder.split("/", 2)[:-1])
+    return "/".join(file_dunder.split("/")[:-1])
 
 
 def get_path(file_dunder, filename):

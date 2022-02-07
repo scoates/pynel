@@ -1,7 +1,7 @@
 import sys
 import os
 
-DIR = "/".join(__file__.split("/", 2)[:-1])
+DIR = "/".join(__file__.split("/")[:-1])
 sys.path.append("/".join([DIR, "board"]))
 
 from util import get_config

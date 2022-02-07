@@ -4,7 +4,7 @@ from neopixel import NeoPixel
 from util import get_config
 from net import wifi_connect
 from img import read_image, show_image
-from web import Context
+from context import Context
 
 
 CONFIG = get_config()

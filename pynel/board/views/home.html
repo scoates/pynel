@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pynel</title>
+  <style id="stylesheet">
+    body {
+      padding: 0;
+      margin: 0;
+    }
+    #panel-img {
+      user-select: none;
+      height: 100vh;
+    }
+    #panel-img svg {
+      height: 100vh;
+      aspect-ratio: 1;
+      width: auto;
+    }
+    #grid-container {
+      display: flex;
+      max-width: 100%;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+    #palette {
+      display: grid;
+      align-items: start;
+      height: 100vh;
+      justify-content: stretch;
+      grid-template-rows: 10fr 1fr;
+      width: 100%;
+    }
+    #palette-colors {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: 1fr;
+      height: 100%;
+    }
+    #show {
+      grid-gap 10px;
+    }
+    #show-button {
+      height: 100%;
+      width: 100%;
+    }
+    .pal-color {
+      border: 1px solid black;
+      padding: 0;
+      box-model: inline-box;
+      line-height: 0;
+    }
+    .pal-color.selected {
+      padding: 0;
+      border: 10px solid white;
+    }
+  </style>
+  <script>
+    let palette = [];
+    let pixels = [];
+    let config = {};
+    let currentColor;
+
+    let selectColor = function(num) {
+      currentColor = palette[num];
+      for (let i=0; i<palette.length; i++) {
+        let el = document.getElementById("pal_" + i);
+        if (el) {
+          if (i === num) {
+            el.classList.add("selected");
+          } else {
+            el.classList.remove("selected");
+          }
+        }
+      }
+    };
+
+    let redrawPixels = function() {
+      for (let i=0; i<pixels.length; i++) {
+        let el = document.getElementById("pix_" + i);
+        let pix = pixels[i];
+        el.style.fill = `rgb(${pix[0]}, ${pix[1]}, ${pix[2]})`;
+      }
+    };
+
+    let makePaletteClickHandler = function(num) {
+      return function() {
+        selectColor(num);
+      }
+    };
+
+    let makePixelClickHandler = function(num, pixels) {
+      return function(e) {
+        if (e.buttons === 1) {
+          pixels[num] = currentColor;
+          redrawPixels();
+        } else if (e.buttons === 2) {
+          pixels[num] = [0, 0, 0];
+          redrawPixels();
+        }
+      }
+    };
+
+    /*
+
+    I dislike when browsers do this type of thing when it would be better if the server
+    just took care of it. However, it's slow to do this kind of string collation on
+    MicroPython on ESP32 because memory allocation (especially over the SPI PSRAM) is
+    slow. The browser is actually a better choice here.
+
+     */
+
+    let setUpPalette = function() {
+      let stylesheet = document.getElementById("stylesheet").sheet;
+      let paletteColors = document.getElementById("palette-colors");
+      for (let i=0; i<palette.length; i++) {
+        let el = document.createElement("div");
+        el.id = "pal_" + i;
+        el.className = "pal-color";
+        el.innerHTML = " "
+        paletteColors.append(el);
+        let pal = palette[i];
+        stylesheet.insertRule(
+          `#pal_${i} { background-color: rgb(${pal[0]}, ${pal[1]}, ${pal[2]}) }`
+        );
+      }
+    };
+
+    let setUpPixels = function() {
+      let panelImg = document.getElementById("panelimg");
+      for (let y=0; y<config["h"]; y++) {
+        for (let x=0; x<config["w"]; x++) {
+          let i = (y * config["w"]) + x;
+          let el = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "rect"
+          );
+          el.id = "pix_" + i;
+          let scale = config["scale"];
+          el.setAttribute("height", scale);
+          el.setAttribute("width", scale);
+          el.setAttribute("x", (x * scale).toString());
+          el.setAttribute("y", (y * scale).toString());
+          el.setAttribute("rx", "2");
+          panelImg.append(el);
+        }
+      }
+      redrawPixels();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+
+      fetch('/palette')
+        .then(res => res.json())
+        .then(data => palette = data)
+        .then(setUpPalette)
+        .then(() => selectColor(0))
+        .then(() => {
+          for (let i=0; i<palette.length; i++) {
+            let el = document.getElementById("pal_" + i);
+            el.addEventListener("click", makePaletteClickHandler(i));
+          }
+        });
+
+      fetch('/config')
+        .then(res => res.json())
+        .then(data => config = data)
+        .then(() => {
+          fetch('/pixels')
+            .then(res => res.json())
+            .then(data => pixels = data)
+            .then(setUpPixels)
+            .then(() => {
+              for (let i = 0; i < pixels.length; i++) {
+                let el = document.getElementById("pix_" + i);
+                el.addEventListener("mousedown", makePixelClickHandler(i, pixels));
+                el.addEventListener("mouseenter", makePixelClickHandler(i, pixels));
+                el.addEventListener("contextmenu", e => {
+                  e.preventDefault();
+                });
+              }
+            });
+        });
+
+      let el = document.getElementById("show");
+      el.addEventListener("click", function(e) {
+        fetch('/change', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pixels),
+        })
+          .then(response => response)
+          .then(data => {
+            console.log('Success:', data);
+          })
+          .catch((error) => {
+            console.error('Error:', error);
+          });
+      });
+    });
+  </script>
+</head>
+<body>
+<div id="grid-container">
+  <div id="panel-img">
+    <svg id="panelimg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" style="background-color: black;">
+      <style>
+        rect {
+          stroke: #111;
+          stroke-width: 2;
+        }
+      </style>
+    </svg>
+  </div>
+  <div id="palette">
+    <div id="palette-colors">
+      <!-- filled by the browser -->
+    </div>
+    <div id="show"><button id="show-button">Show!</button></div>
+  </div>
+</div>
+</body>
+</html>

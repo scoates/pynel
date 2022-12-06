@@ -6,7 +6,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     # MicroPython 1.17 is closer to Python 3.4, but that's no longer
     # available in nixpkgs
-    (python37.withPackages (pypkgs: [ pypkgs.pip pypkgs.virtualenv ]))
+    (python38.withPackages (pypkgs: [ pypkgs.pip pypkgs.virtualenv ]))
     pipenv
   ];
   shellHook = ''

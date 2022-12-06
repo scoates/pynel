@@ -62,15 +62,6 @@ def _truncate_round(val):
     return round(val)
 
 
-def brightness_limited_pixel(pixel, level):
-    # great reference here https://ie.nitk.ac.in/blog/2020/01/19/algorithms-for-adjusting-brightness-and-contrast-of-an-image/
-    b = [0, 0, 0]
-    lev = level / 100  # scale based on this percent
-    for r_g_b in range(3):
-        b[r_g_b] = _truncate_round(pixel[r_g_b] * lev)
-    return b
-
-
 def show_image(pixels):
     w = Context.data["CONFIG"]["PIXELS_W"]
     h = Context.data["CONFIG"]["PIXELS_H"]
@@ -78,8 +69,11 @@ def show_image(pixels):
     if Context.data["CONFIG"]["SERPENTINE"]:
         pixels = serpentine(pixels, w, h)
     for n in range(w * h):
-        np[n] = brightness_limited_pixel(
-            pixels[n], Context.data["CONFIG"]["BRIGHTNESS"]
-        )
+        np[n] = [
+            _truncate_round(pixels[n][0] * (Context.data["CONFIG"]["BRIGHTNESS"] / 100)),
+            _truncate_round(pixels[n][1] * (Context.data["CONFIG"]["BRIGHTNESS"] / 100)),
+            _truncate_round(pixels[n][2] * (Context.data["CONFIG"]["BRIGHTNESS"] / 100)),
+        ]
+        print(f"setting Pixel {n} to {np[n]}")
 
     np.write()
